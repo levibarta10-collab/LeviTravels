@@ -1,224 +1,169 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>The World I've Been To — Improved</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The World I've Been Too</title>
 
-  <!-- Cal Sans: attempt via Google/Inter fallback -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <!-- Cal Sans font -->
+  <link href="https://fonts.googleapis.com/css2?family=Cal+Sans&display=swap" rel="stylesheet">
 
+  <!-- Basic styles -->
   <style>
-    :root{
-      --ui-font: 'Cal Sans', 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-      --bg: #000;
-      --panel-radius: 12px;
-      --accent: #0077ff;
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: 'Cal Sans', sans-serif;
+      background: black;
+      color: white;
     }
-    html,body{height:100%;margin:0;font-family:var(--ui-font);background:var(--bg);color:#fff;-webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;}
-    #container{position:fixed;inset:0;display:flex;align-items:stretch;justify-content:stretch;overflow:hidden}
-    #globeViz{flex:1;position:relative}
-    #loader{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:#fff;font-size:15px;text-align:center;z-index:40}
-    .spinner{width:44px;height:44px;border-radius:50%;border:5px solid rgba(255,255,255,0.08);border-top-color:#4ade80;animation:spin 1s linear infinite;margin:0 auto 10px auto}
-    @keyframes spin{to{transform:rotate(360deg);}}
-    /* Modal */
-    .overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);backdrop-filter:blur(3px);z-index:60}
-    .panel{width:540px;max-width:calc(100% - 32px);background:#fff;color:#111;border-radius:var(--panel-radius);box-shadow:0 18px 60px rgba(0,0,0,0.5);overflow:hidden;font-family:var(--ui-font)}
-    .header{display:flex;align-items:center;gap:12px;padding:16px;border-bottom:1px solid rgba(0,0,0,0.06)}
-    .flag-emoji{font-size:28px}
-    .title{font-weight:700;font-size:18px}
-    .close{margin-left:auto;background:transparent;border:0;font-size:18px;cursor:pointer}
-    .content{display:grid;grid-template-columns:1fr 180px;padding:14px;gap:12px}
-    .notes{min-height:120px;padding:8px;border-radius:8px;border:1px solid #ddd;background:#fff;overflow:auto}
-    .scale-row{display:flex;gap:6px;margin-bottom:8px}
-    .scale-box{flex:1;padding:8px;border-radius:8px;text-align:center;cursor:pointer;border:1px solid #ddd;font-weight:700;user-select:none}
-    .footer{display:flex;align-items:center;justify-content:space-between;padding:12px;border-top:1px solid #eee}
-    .stat{font-size:13px;color:#333}
-    .small{font-size:12px;color:#666}
-    @media (max-width:600px){.content{grid-template-columns:1fr}}
+
+    .popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      color: black;
+      border-radius: 12px;
+      padding: 20px;
+      width: 400px;
+      max-width: 90%;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      display: none;
+      z-index: 1000;
+    }
+
+    .popup img {
+      width: 100%;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+
+    .popup input, .popup textarea {
+      width: 100%;
+      margin-top: 5px;
+      margin-bottom: 10px;
+      padding: 5px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-family: 'Cal Sans', sans-serif;
+    }
+
+    .popup .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 18px;
+    }
+
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      z-index: 900;
+    }
   </style>
 </head>
 <body>
-  <div id="container">
-    <div id="globeViz" aria-hidden="false"></div>
-    <div id="loader" role="status"><div class="spinner"></div><div id="loader-text">Loading globe — this can take a few seconds</div></div>
-  </div>
 
-  <!-- Modal -->
-  <div id="overlay" class="overlay" aria-hidden="true">
-    <div class="panel" role="dialog" aria-modal="true">
-      <div class="header">
-        <div class="flag-emoji" id="modal-flag">🏳️</div>
-        <div>
-          <div class="title" id="modal-name">Country / State</div>
-          <div class="small" id="modal-sub">0% world visited</div>
-        </div>
-        <button class="close" id="modal-close" title="Close">✕</button>
+  <!-- Overlay -->
+  <div class="overlay" id="overlay"></div>
+
+  <!-- Popup -->
+  <div class="popup" id="popup">
+    <span class="close-btn" id="closePopup">&times;</span>
+    <h2 id="popupTitle">Country Name 🇺🇸</h2>
+    <div>
+      <div id="ratingContainer">
+        Rating: 
+        <span data-value="1" style="background:red;padding:3px 6px;border-radius:4px;cursor:pointer;">1</span>
+        <span data-value="2" style="background:#ff4500;padding:3px 6px;border-radius:4px;cursor:pointer;">2</span>
+        <span data-value="3" style="background:#ffa500;padding:3px 6px;border-radius:4px;cursor:pointer;">3</span>
+        <span data-value="4" style="background:#ffff00;padding:3px 6px;border-radius:4px;cursor:pointer;">4</span>
+        <span data-value="5" style="background:#adff2f;padding:3px 6px;border-radius:4px;cursor:pointer;">5</span>
       </div>
-      <div class="content">
-        <div>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-            <div class="small">Rate (1-10)</div>
-            <div id="percent-visited" class="small">Country visited: 0%</div>
-          </div>
-          <div id="scale-row" class="scale-row"></div>
-          <div style="margin:8px 0">Emoji: <input id="emoji-input" style="font-size:20px;padding:6px;border-radius:8px;border:1px solid #ddd" placeholder="😊" /></div>
-          <div style="margin-top:8px"><div class="small" style="margin-bottom:6px">Notes</div><div id="notes" class="notes" contenteditable="true"></div></div>
-        </div>
-        <div>
-          <div class="small" style="margin-bottom:6px">Shape</div>
-          <div id="shape" style="width:100%;height:140px;border-radius:8px;background:#f3f3f3;border:1px solid #ddd;overflow:hidden;display:flex;align-items:center;justify-content:center">Shape preview</div>
-          <div class="small" style="margin-top:8px">Famous photo (placeholder)</div>
-          <img id="photo" style="width:100%;height:90px;object-fit:cover;border-radius:6px;margin-top:6px" src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/240px-No_image_available.svg.png" alt="placeholder photo" />
-        </div>
-      </div>
-      <div class="footer">
-        <div class="stat" id="counter">0 / 0</div>
-        <div style="display:flex;gap:8px"><button id="reset" style="padding:8px 10px;border-radius:8px;border:1px solid #ddd;background:#fff">Reset</button><button id="save" style="padding:8px 10px;border-radius:8px;border:0;background:var(--accent);color:#fff">Save</button></div>
-      </div>
+      <textarea id="notes" rows="4" placeholder="Write your notes here..."></textarea>
+      <img src="https://via.placeholder.com/400x200.png?text=Famous+Image" alt="Famous Image" id="popupImage">
     </div>
   </div>
 
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>The World I've Been To — Improved</title>
+  <!-- Scripts -->
+  <!-- 1. Three.js -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
 
- <!-- ✅ Load Three.js first -->
-<script src="https://unpkg.com/three@0.152.2/build/three.min.js"></script>
+  <!-- 2. OrbitControls -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/js/controls/OrbitControls.js"></script>
 
-<!-- ✅ Then load OrbitControls (depends on THREE) -->
-<script src="https://unpkg.com/three@0.152.2/examples/js/controls/OrbitControls.js"></script>
+  <!-- 3. Three-Globe -->
+  <script src="https://cdn.jsdelivr.net/npm/three-globe@2.27.0/dist/three-globe.min.js"></script>
 
-<!-- ✅ Then load Three-Globe (depends on THREE) -->
-<script src="https://unpkg.com/three-globe@2.27.0/dist/three-globe.min.js"></script>
+  <script>
+  // Wait until everything loads
+  window.addEventListener('load', () => {
 
-<!-- ✅ Finally, run your globe setup only after everything loads -->
-<script>
-window.addEventListener('load', () => {
-  if (!window.THREE) {
-    console.error("❌ THREE.js failed to load");
-    return;
-  }
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  document.body.style.margin = "0";
-  document.body.appendChild(renderer.domElement);
+    // Scene & Camera
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    camera.position.z = 300;
 
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(
-    75,
-    window.innerWidth / window.innerHeight,
-    0.1,
-    1000
-  );
-  camera.position.z = 300;
+    // Controls
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
 
-  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    // Globe
+    const globe = new ThreeGlobe()
+      .globeImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
+      .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png');
 
-  const globe = new ThreeGlobe()
-    .globeImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
-    .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png');
+    scene.add(globe);
 
-  scene.add(globe);
+    // Animate
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+    animate();
 
-  function animate() {
-    requestAnimationFrame(animate);
-    renderer.render(scene, camera);
-  }
-  animate();
-});
-</script>
+    // Popup Logic
+    const overlay = document.getElementById('overlay');
+    const popup = document.getElementById('popup');
+    const closeBtn = document.getElementById('closePopup');
+    const notes = document.getElementById('notes');
+    const popupTitle = document.getElementById('popupTitle');
 
+    function openPopup(name) {
+      popupTitle.textContent = name + " 🇺🇸";
+      notes.value = localStorage.getItem(name) || '';
+      overlay.style.display = 'block';
+      popup.style.display = 'block';
+    }
+
+    function closePopup() {
+      localStorage.setItem(popupTitle.textContent.replace(" 🇺🇸",""), notes.value);
+      overlay.style.display = 'none';
+      popup.style.display = 'none';
+    }
+
+    closeBtn.addEventListener('click', closePopup);
+    overlay.addEventListener('click', closePopup);
+
+    // For demonstration: click anywhere opens popup
+    renderer.domElement.addEventListener('click', () => {
+      openPopup("Example Country");
     });
 
-    // Modal & saving
-    const overlay = document.getElementById('overlay');
-    const modalName = document.getElementById('modal-name');
-    const modalFlag = document.getElementById('modal-flag');
-    const notes = document.getElementById('notes');
-    const saveBtn = document.getElementById('save');
-    const closeBtn = document.getElementById('modal-close');
-    const resetBtn = document.getElementById('reset');
-    const photo = document.getElementById('photo');
-    const shape = document.getElementById('shape');
-    const scaleRow = document.getElementById('scale-row');
-    const counter = document.getElementById('counter');
-    let activeFeature = null;
-    let selectedScale = 0;
-
-    for(let i=1;i<=10;i++){
-      const b=document.createElement('div'); b.className='scale-box'; b.dataset.value=i; b.textContent=i;
-      b.addEventListener('click', ()=>{ selectedScale = i; highlightScale(i); });
-      scaleRow.appendChild(b);
-    }
-    function highlightScale(n){ Array.from(scaleRow.children).forEach(c=>{ c.style.outline = (parseInt(c.dataset.value)===n)?'3px solid rgba(0,0,0,0.12)':'none'; }); }
-
-    function openModal(d){
-      activeFeature = d;
-      overlay.style.display='flex';
-      modalName.textContent = d.properties && (d.properties.name || d.properties.NAME) || 'Unknown';
-      modalFlag.textContent = d.properties && d.properties.iso2 ? iso2ToFlagEmoji(d.properties.iso2) : '🏳️';
-      const key = storageKeyFor(d);
-      const saved = JSON.parse(localStorage.getItem(key) || 'null') || {};
-      notes.innerText = saved.notes || '';
-      selectedScale = saved.scale || 0; highlightScale(selectedScale);
-      photo.src = saved.photo || 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/240px-No_image_available.svg.png';
-      drawShapePreview(d);
-      updateCounter();
-    }
-
-    closeBtn.addEventListener('click', ()=>{ saveAndClose(); });
-    saveBtn.addEventListener('click', ()=>{ saveAndClose(); });
-    resetBtn.addEventListener('click', ()=>{ if(!activeFeature) return; localStorage.removeItem(storageKeyFor(activeFeature)); applySaved(); saveAndClose(); });
-
-    function saveAndClose(){
-      if(!activeFeature){ overlay.style.display='none'; return; }
-      const key = storageKeyFor(activeFeature);
-      const data = { notes: notes.innerText||'', scale: selectedScale||0, photo: photo.src||'', visited: true };
-      localStorage.setItem(key, JSON.stringify(data));
-      applySaved();
-      overlay.style.display='none'; activeFeature=null;
-    }
-
-    function storageKeyFor(d){ return 'globe-data::' + ((d.properties && (d.properties.name || d.properties.NAME)) || d.id || Math.random()).replace(/\s+/g,'_'); }
-    function iso2ToFlagEmoji(iso){ if(!iso) return '🏳️'; const A = 0x1F1E6 - 65; return String.fromCodePoint(...[...iso.toUpperCase()].map(c=>c.charCodeAt(0)+A)); }
-
-    function drawShapePreview(d){
-      shape.innerHTML='';
-      try{
-        const canvas=document.createElement('canvas'); canvas.width=320; canvas.height=200; shape.appendChild(canvas);
-        const ctx=canvas.getContext('2d'); ctx.fillStyle='#f3f3f3'; ctx.fillRect(0,0,320,200); ctx.fillStyle='#333'; ctx.font='14px sans-serif'; ctx.fillText((d.properties && (d.properties.name||'')).slice(0,40),10,20);
-      }catch(e){ shape.textContent='(shape)'; }
-    }
-
-    function applySaved(){
-      Globe.polygonCapColor(d=>{
-        const key = storageKeyFor(d);
-        const saved = JSON.parse(localStorage.getItem(key) || 'null');
-        if(saved && saved.visited) return '#ffffff';
-        return '#3a86ff';
-      });
-      updateCounter();
-    }
-
-    function updateCounter(){
-      const keys = Object.keys(localStorage).filter(k=>k.startsWith('globe-data::'));
-      const total = Globe.polygonsData() ? Globe.polygonsData().length : 0;
-      counter.textContent = keys.length + ' / ' + total;
-      document.getElementById('modal-sub').textContent = `${total?Math.round((keys.length/total)*100):0}% visited`;
-    }
-
-    // Small UX: hide loader if nothing wrong after a short wait
-    setTimeout(()=>{ if(loader && loader.style) loader.style.display='none'; applySaved(); }, 3000);
-
-    window.__Globe = Globe; // debug handle
-  })();
+  });
   </script>
 </body>
 </html>

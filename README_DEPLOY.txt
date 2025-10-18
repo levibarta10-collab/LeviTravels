@@ -1,19 +1,19 @@
 
-The World I've Been To — Improved bundle
+The World I've Been To 2.0 - Ready-to-Upload bundle
 
-Files in this folder:
-- index.html  (main site)
-- .nojekyll    (prevents GitHub Pages from running Jekyll)
-- README_DEPLOY.txt (deployment instructions)
+Files:
+- index.html
+- .nojekyll
 
-Deploy:
-1. Create a new GitHub repo or open an existing one.
-2. Upload index.html and .nojekyll to the root of the repo (Add file → Upload files).
+Instructions:
+1. Create a new GitHub repository (or use an existing one).
+2. Upload index.html and .nojekyll to the root of the repository.
 3. Commit to the main branch.
-4. In Settings → Pages, set Source to main branch and folder to /(root). Save.
-5. Wait ~1-2 minutes and open the GitHub Pages URL shown in Settings.
-6. If the globe doesn't display, open browser DevTools Console and paste errors into our chat for debugging.
+4. In Settings -> Pages, set Source to main branch and / (root). Save.
+5. Wait 1-2 minutes and open the GitHub Pages URL shown in Settings.
+6. Hard refresh (Ctrl+Shift+R) if you see cached content.
 
 Notes:
-- This version uses three.js and three-globe from CDN (jsdelivr). If your Pages settings or environment block CDNs, we can include local copies in the repo instead.
-- All progress is stored in browser localStorage (per device).
+- The site stores your notes, visited flag, rating, and uploaded image as a data URL in your browser's localStorage (per device).
+- The admin1 (states/provinces) dataset is large; if it fails to load on GitHub Pages due to network/CORS or size, the globe will still show countries only.
+- If you want true server-side sync across devices, we can integrate Firebase/Supabase in a follow-up.

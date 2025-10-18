@@ -1,169 +1,332 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The World I've Been Too</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>The World I've Been To 2.0</title>
 
-  <!-- Cal Sans font -->
-  <link href="https://fonts.googleapis.com/css2?family=Cal+Sans&display=swap" rel="stylesheet">
+  <!-- Cal Sans (fallback to Inter if not available) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
-  <!-- Basic styles -->
   <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      font-family: 'Cal Sans', sans-serif;
-      background: black;
-      color: white;
+    :root{
+      --ui-font:'Cal Sans','Inter',system-ui,-apple-system,"Segoe UI",Roboto,Arial;
+      --bg:#000;
+      --panel-radius:12px;
+      --accent:#38bdf8; /* sky blue accent */
     }
+    html,body{height:100%;margin:0;font-family:var(--ui-font);background:var(--bg);color:#fff;-webkit-font-smoothing:antialiased}
+    #container{position:fixed;inset:0;display:flex;align-items:stretch;justify-content:stretch;overflow:hidden}
+    #globeViz{flex:1;position:relative}
+    #loader{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:#fff;font-size:15px;text-align:center;z-index:40}
+    .spinner{width:44px;height:44px;border-radius:50%;border:5px solid rgba(255,255,255,0.08);border-top-color:var(--accent);animation:spin 1s linear infinite;margin:0 auto 10px auto}
+    @keyframes spin{to{transform:rotate(360deg);}}
 
-    .popup {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      color: black;
-      border-radius: 12px;
-      padding: 20px;
-      width: 400px;
-      max-width: 90%;
-      box-shadow: 0 0 20px rgba(0,0,0,0.5);
-      display: none;
-      z-index: 1000;
-    }
+    /* modal */
+    .overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);backdrop-filter:blur(3px);z-index:120}
+    .panel{width:560px;max-width:calc(100% - 32px);background:#fff;color:#111;border-radius:var(--panel-radius);box-shadow:0 18px 60px rgba(0,0,0,0.5);overflow:hidden;font-family:var(--ui-font)}
+    .header{display:flex;align-items:center;gap:12px;padding:16px;border-bottom:1px solid rgba(0,0,0,0.06)}
+    .flag-emoji{font-size:28px}
+    .title{font-weight:700;font-size:18px}
+    .close{margin-left:auto;background:transparent;border:0;font-size:18px;cursor:pointer}
+    .content{display:grid;grid-template-columns:1fr 200px;padding:14px;gap:12px}
+    .notes{min-height:120px;padding:8px;border-radius:8px;border:1px solid #ddd;background:#fff;overflow:auto}
+    .scale-row{display:flex;gap:6px;margin-bottom:8px}
+    .scale-box{flex:1;padding:8px;border-radius:8px;text-align:center;cursor:pointer;border:1px solid #ddd;font-weight:700;user-select:none}
+    .footer{display:flex;align-items:center;justify-content:space-between;padding:12px;border-top:1px solid #eee}
+    .stat{font-size:13px;color:#333}
+    .small{font-size:12px;color:#666}
+    .checkbox-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+    .upload-input{display:block;margin-top:6px}
 
-    .popup img {
-      width: 100%;
-      border-radius: 8px;
-      margin-bottom: 10px;
-    }
-
-    .popup input, .popup textarea {
-      width: 100%;
-      margin-top: 5px;
-      margin-bottom: 10px;
-      padding: 5px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      font-family: 'Cal Sans', sans-serif;
-    }
-
-    .popup .close-btn {
-      position: absolute;
-      top: 10px;
-      right: 15px;
-      cursor: pointer;
-      font-weight: bold;
-      font-size: 18px;
-    }
-
-    .overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.6);
-      display: none;
-      z-index: 900;
-    }
+    @media (max-width:600px){.content{grid-template-columns:1fr}}
+    /* top-left UI */
+    .topbar{position:absolute;left:12px;top:12px;z-index:80;background:rgba(0,0,0,0.5);padding:8px 12px;border-radius:10px;color:#fff;font-size:14px}
+    .topbar .counter{font-weight:700;margin-right:12px}
   </style>
 </head>
 <body>
+  <div id="container">
+    <div id="globeViz" aria-hidden="false"></div>
+    <div id="loader" role="status"><div class="spinner"></div><div id="loader-text">Loading globe — this can take a few seconds</div></div>
+    <div class="topbar" id="topbar"><span class="counter" id="visitedCounter">0 / 0</span><span id="percentWorld">0% world visited</span></div>
+  </div>
 
-  <!-- Overlay -->
-  <div class="overlay" id="overlay"></div>
-
-  <!-- Popup -->
-  <div class="popup" id="popup">
-    <span class="close-btn" id="closePopup">&times;</span>
-    <h2 id="popupTitle">Country Name 🇺🇸</h2>
-    <div>
-      <div id="ratingContainer">
-        Rating: 
-        <span data-value="1" style="background:red;padding:3px 6px;border-radius:4px;cursor:pointer;">1</span>
-        <span data-value="2" style="background:#ff4500;padding:3px 6px;border-radius:4px;cursor:pointer;">2</span>
-        <span data-value="3" style="background:#ffa500;padding:3px 6px;border-radius:4px;cursor:pointer;">3</span>
-        <span data-value="4" style="background:#ffff00;padding:3px 6px;border-radius:4px;cursor:pointer;">4</span>
-        <span data-value="5" style="background:#adff2f;padding:3px 6px;border-radius:4px;cursor:pointer;">5</span>
+  <!-- modal -->
+  <div id="overlay" class="overlay" aria-hidden="true">
+    <div class="panel" role="dialog" aria-modal="true">
+      <div class="header">
+        <div class="flag-emoji" id="modal-flag">🏳️</div>
+        <div>
+          <div class="title" id="modal-name">Country / State</div>
+          <div class="small" id="modal-sub">0% visited</div>
+        </div>
+        <button class="close" id="modal-close" title="Close">✕</button>
       </div>
-      <textarea id="notes" rows="4" placeholder="Write your notes here..."></textarea>
-      <img src="https://via.placeholder.com/400x200.png?text=Famous+Image" alt="Famous Image" id="popupImage">
+      <div class="content">
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <div class="small">Rate (1-10)</div>
+            <div id="percent-visited" class="small">Region visited: 0%</div>
+          </div>
+          <div id="scale-row" class="scale-row"></div>
+          <div style="margin:8px 0">Emoji: <input id="emoji-input" style="font-size:20px;padding:6px;border-radius:8px;border:1px solid #ddd" placeholder="😊" /></div>
+          <div style="margin-top:8px"><div class="small" style="margin-bottom:6px">Notes</div><div id="notes" class="notes" contenteditable="true"></div></div>
+          <div class="checkbox-row"><input type="checkbox" id="visitedCheckbox"><label for="visitedCheckbox">Visited</label></div>
+          <div style="margin-top:8px">
+            <label class="small">Upload image for this place (stored locally)</label>
+            <input class="upload-input" type="file" id="uploadImage" accept="image/*">
+          </div>
+        </div>
+        <div>
+          <div class="small" style="margin-bottom:6px">Shape</div>
+          <div id="shape" style="width:100%;height:160px;border-radius:8px;background:#f3f3f3;border:1px solid #ddd;overflow:hidden;display:flex;align-items:center;justify-content:center">Shape preview</div>
+          <div class="small" style="margin-top:8px">Famous photo / uploaded image</div>
+          <img id="photo" style="width:100%;height:90px;object-fit:cover;border-radius:6px;margin-top:6px" src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/240px-No_image_available.svg.png" alt="placeholder photo" />
+        </div>
+      </div>
+      <div class="footer">
+        <div class="stat" id="counter">0 / 0</div>
+        <div style="display:flex;gap:8px">
+          <button id="reset" style="padding:8px 10px;border-radius:8px;border:1px solid #ddd;background:#fff">Reset</button>
+          <button id="save" style="padding:8px 10px;border-radius:8px;border:0;background:var(--accent);color:#fff">Save</button>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Scripts -->
-  <!-- 1. Three.js -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
-
-  <!-- 2. OrbitControls -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/js/controls/OrbitControls.js"></script>
-
-  <!-- 3. Three-Globe -->
-  <script src="https://cdn.jsdelivr.net/npm/three-globe@2.27.0/dist/three-globe.min.js"></script>
+  <!-- Libraries: load in order -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three-globe@2.22.1/dist/three-globe.min.js"></script>
+  <script src="https://unpkg.com/topojson-client@3/dist/topojson-client.min.js"></script>
 
   <script>
-  // Wait until everything loads
-  window.addEventListener('load', () => {
+  (function(){
+    const GLOBE_CONTAINER = document.getElementById('globeViz');
+    const loader = document.getElementById('loader');
+    const loaderText = document.getElementById('loader-text');
+    const topbarCounter = document.getElementById('visitedCounter');
+    const percentWorld = document.getElementById('percentWorld');
 
-    // Renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
-
-    // Scene & Camera
+    // scene + camera + renderer
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-    camera.position.z = 300;
+    scene.background = new THREE.Color(0x000000);
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 2000);
+    camera.position.z = 350;
 
-    // Controls
+    const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    GLOBE_CONTAINER.appendChild(renderer.domElement);
+
+    // controls - remain still until user interacts
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enablePan = false;
+    controls.enableZoom = true;
+    controls.minDistance = 150;
+    controls.maxDistance = 900;
+    controls.autoRotate = false;
+    controls.enableDamping = true;
+    controls.enabled = false; // enabled on pointerdown
+    renderer.domElement.addEventListener('pointerdown', ()=>{ controls.enabled = true; });
 
-    // Globe
-    const globe = new ThreeGlobe()
-      .globeImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
+    // lights
+    scene.add(new THREE.AmbientLight(0xbbbbbb));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    dirLight.position.set(100,100,100);
+    scene.add(dirLight);
+
+    // globe
+    const Globe = new ThreeGlobe({animateIn:true})
+      .globeImageUrl('//unpkg.com/three-globe/example/img/earth-dark.jpg')
       .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png');
+    scene.add(Globe);
 
-    scene.add(globe);
+    // urls
+    const worldTopoUrl = 'https://unpkg.com/world-atlas@2.0.2/world/110m.json';
+    const admin1Url = 'https://cdn.jsdelivr.net/gh/deldersveld/topojson@master/world-admin1.json';
 
-    // Animate
-    function animate() {
-      requestAnimationFrame(animate);
-      renderer.render(scene, camera);
-    }
-    animate();
+    let hovered = null; // currently hovered feature
 
-    // Popup Logic
-    const overlay = document.getElementById('overlay');
-    const popup = document.getElementById('popup');
-    const closeBtn = document.getElementById('closePopup');
-    const notes = document.getElementById('notes');
-    const popupTitle = document.getElementById('popupTitle');
+    Promise.all([
+      fetch(worldTopoUrl).then(r=>r.json()),
+      fetch('https://restcountries.com/v3.1/all').then(r=>r.json()).catch(()=>[]),
+      fetch(admin1Url).then(r=>r.json()).catch(()=>null)
+    ]).then(([worldTopo, restCountries, admin1Topo])=>{
+      loaderText.innerText = 'Preparing countries + states...';
 
-    function openPopup(name) {
-      popupTitle.textContent = name + " 🇺🇸";
-      notes.value = localStorage.getItem(name) || '';
-      overlay.style.display = 'block';
-      popup.style.display = 'block';
-    }
+      const countries = topojson.feature(worldTopo, worldTopo.objects.countries).features;
 
-    function closePopup() {
-      localStorage.setItem(popupTitle.textContent.replace(" 🇺🇸",""), notes.value);
-      overlay.style.display = 'none';
-      popup.style.display = 'none';
-    }
+      const restByIso = new Map();
+      restCountries.forEach(rc=>{ if(rc.cca2) restByIso.set(rc.cca2.toUpperCase(), rc); if(rc.name && rc.name.common) restByIso.set(rc.name.common.toLowerCase(), rc); });
 
-    closeBtn.addEventListener('click', closePopup);
-    overlay.addEventListener('click', closePopup);
+      const polygons = countries.map(f=>{
+        const id = f.id || (f.properties && (f.properties.iso_a2 || f.properties.ADM0_A3 || ''));
+        const name = f.properties && (f.properties.name || f.properties.NAME) || f.id || 'Unknown';
+        const rc = restByIso.get((id||'').toUpperCase()) || restByIso.get((name||'').toLowerCase());
+        const iso2 = rc && rc.cca2;
+        return { type:'Feature', properties: Object.assign({}, f.properties, {name:name, iso2: iso2}), geometry: f.geometry };
+      });
 
-    // For demonstration: click anywhere opens popup
-    renderer.domElement.addEventListener('click', () => {
-      openPopup("Example Country");
+      # admin1 attempt
+      subsPolys = []
+      try:
+          if admin1Topo and admin1Topo.objects:
+              objNames = list(admin1Topo['objects'].keys())
+              useObj = objNames[0]
+              subs = topojson.feature(admin1Topo, admin1Topo['objects'][useObj]).features
+              subsPolys = [ { "type": "Feature", "properties": f["properties"], "geometry": f["geometry"] } for f in subs ]
+      except Exception as e:
+          console.warn('admin1 parse failed', e)
+
+      const allPolygons = polygons.concat(subsPolys);
+
+      // define polygon color accessors that consider hovered & saved
+      Globe.polygonsData(allPolygons)
+        .polygonAltitude(d => 0.01)
+        .polygonCapColor(d => {
+          const key = storageKeyFor(d);
+          const saved = JSON.parse(localStorage.getItem(key) || 'null');
+          if(hovered && hovered === d) return '#7fdbff'; // sky-blue on hover
+          if(saved && saved.visited) return '#ffffff';
+          return '#3a86ff';
+        })
+        .polygonSideColor(()=>'rgba(0,0,0,0.15)')
+        .polygonStrokeColor(()=> '#000000')
+        .onPolygonHover((d)=>{
+          hovered = d;
+          if(d) loaderText.innerText = d.properties && (d.properties.name || d.properties.NAME);
+          else loaderText.innerText = 'Ready';
+          Globe.polygonCapColorAccessor(); // trigger re-evaluation (three-globe caches; this is a light touch)
+        })
+        .onPolygonClick((evt,d)=>{ if(!d) return; openModal(d); });
+
+      loader.style.display = 'none';
+      applySaved();
+    }).catch(err=>{
+      console.error('Data load error', err);
+      loaderText.innerText = 'Failed to load globe data — check console';
     });
 
-  });
+    // render loop
+    (function animate(){
+      controls.update();
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    })();
+
+    window.addEventListener('resize', ()=>{
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      camera.aspect = window.innerWidth/window.innerHeight;
+      camera.updateProjectionMatrix();
+    });
+
+    // modal & saving
+    const overlay = document.getElementById('overlay');
+    const modalName = document.getElementById('modal-name');
+    const modalFlag = document.getElementById('modal-flag');
+    const notes = document.getElementById('notes');
+    const saveBtn = document.getElementById('save');
+    const closeBtn = document.getElementById('modal-close');
+    const resetBtn = document.getElementById('reset');
+    const photo = document.getElementById('photo');
+    const shape = document.getElementById('shape');
+    const scaleRow = document.getElementById('scale-row');
+    const counter = document.getElementById('counter');
+    const visitedCheckbox = document.getElementById('visitedCheckbox');
+    const uploadImage = document.getElementById('uploadImage');
+    let activeFeature = null;
+    let selectedScale = 0;
+
+    // build scale UI (1-10)
+    for(let i=1;i<=10;i++){
+      const b = document.createElement('div'); b.className='scale-box'; b.dataset.value=i; b.textContent=i;
+      // gradient color background from red to green
+      const pct = (i-1)/9;
+      // simple linear interpolation red->yellow->green using HSL
+      const hue = (pct * 120); // 0 (red) to 120 (green)
+      b.style.background = `linear-gradient(180deg, hsl(${hue},80%,60%), hsl(${hue},70%,50%))`;
+      b.addEventListener('click', ()=>{ selectedScale = i; highlightScale(i); });
+      scaleRow.appendChild(b);
+    }
+    function highlightScale(n){ Array.from(scaleRow.children).forEach(c=>{ c.style.outline = (parseInt(c.dataset.value)===n)?'3px solid rgba(0,0,0,0.12)':'none'; }); }
+
+    function openModal(d){
+      activeFeature = d;
+      overlay.style.display = 'flex';
+      modalName.textContent = d.properties && (d.properties.name || d.properties.NAME) || 'Unknown';
+      modalFlag.textContent = d.properties && d.properties.iso2 ? iso2ToFlagEmoji(d.properties.iso2) : '🏳️';
+      const key = storageKeyFor(d);
+      const saved = JSON.parse(localStorage.getItem(key) || 'null') || {};
+      notes.innerText = saved.notes || '';
+      selectedScale = saved.scale || 0; highlightScale(selectedScale);
+      visitedCheckbox.checked = !!saved.visited;
+      photo.src = saved.photo || 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/240px-No_image_available.svg.png';
+      drawShapePreview(d);
+      updateCounter();
+    }
+
+    closeBtn.addEventListener('click', ()=>{ saveAndClose(); });
+    saveBtn.addEventListener('click', ()=>{ saveAndClose(); });
+    resetBtn.addEventListener('click', ()=>{ if(!activeFeature) return; localStorage.removeItem(storageKeyFor(activeFeature)); applySaved(); saveAndClose(); });
+
+    function saveAndClose(){
+      if(!activeFeature){ overlay.style.display='none'; return; }
+      const key = storageKeyFor(activeFeature);
+      const data = { notes: notes.innerText||'', scale: selectedScale||0, photo: photo.src||'', visited: !!visitedCheckbox.checked };
+      localStorage.setItem(key, JSON.stringify(data));
+      applySaved();
+      overlay.style.display='none'; activeFeature=null;
+    }
+
+    // upload image handling - store as data URL in localStorage when user selects
+    uploadImage.addEventListener('change', (ev)=>{
+      const file = ev.target.files && ev.target.files[0];
+      if(!file || !activeFeature) return;
+      const reader = new FileReader();
+      reader.onload = function(e){ photo.src = e.target.result; /* auto-save preview (not final until Save pressed) */ };
+      reader.readAsDataURL(file);
+    });
+
+    function storageKeyFor(d){ return 'globe-data::' + ((d.properties && (d.properties.name || d.properties.NAME)) || d.id || Math.random()).replace(/\s+/g,'_'); }
+    function iso2ToFlagEmoji(iso){ if(!iso) return '🏳️'; const A = 0x1F1E6 - 65; return String.fromCodePoint(...[...iso.toUpperCase()].map(c=>c.charCodeAt(0)+A)); }
+
+    function drawShapePreview(d){
+      shape.innerHTML='';
+      try{
+        const canvas=document.createElement('canvas'); canvas.width=320; canvas.height=200; shape.appendChild(canvas);
+        const ctx=canvas.getContext('2d'); ctx.fillStyle='#f3f3f3'; ctx.fillRect(0,0,320,200); ctx.fillStyle='#333'; ctx.font='14px sans-serif'; ctx.fillText((d.properties && (d.properties.name||'')).slice(0,40),10,24);
+      }catch(e){ shape.textContent='(shape)'; }
+    }
+
+    function applySaved(){
+      Globe.polygonCapColor(d=>{
+        const key = storageKeyFor(d);
+        const saved = JSON.parse(localStorage.getItem(key) || 'null');
+        if(hovered && hovered === d) return '#7fdbff'; // sky-blue hover
+        if(saved && saved.visited) return '#ffffff';
+        return '#3a86ff';
+      });
+      updateCounter();
+    }
+
+    function updateCounter(){
+      const keys = Object.keys(localStorage).filter(k=>k.startsWith('globe-data::'));
+      const total = Globe.polygonsData() ? Globe.polygonsData().length : 0;
+      counter.textContent = keys.length + ' / ' + total;
+      topbarCounter.textContent = keys.length + ' / ' + total;
+      percentWorld.textContent = `${total?Math.round((keys.length/total)*100):0}% world visited`;
+      document.getElementById('modal-sub').textContent = `${total?Math.round((keys.length/total)*100):0}% visited`;
+    }
+
+    // small UX: hide loader after a short wait
+    setTimeout(()=>{ if(loader && loader.style) loader.style.display='none'; applySaved(); }, 3000);
+
+    window.__Globe = Globe; // expose for debugging
+  })();
   </script>
 </body>
 </html>
